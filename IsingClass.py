@@ -14,7 +14,7 @@ class Ising():
         return lattice
     
     #plot the spin configuration in the lattice 
-    def lattice_plt(self):
+    def lattice_plt(self, lattice):
         plt.matshow(lattice, cmap=plt.cm.gray)
         #LaTeX
         plt.rc('text', usetex=True)
@@ -28,15 +28,15 @@ class Ising():
         return lattice[(i+1) % Nx][j] + lattice[(i-1) % Nx][j] + lattice[i][(j+1) % Ny] +  lattice[i][(j-1) % Ny]
     
     #delta_energy with periodic BC imposed using the modulo operator, per spin site
-    def dEnergy(self, lattice,i,j,Nx,Ny): 
+    def dEnergy(self, lattice,i,j,Nx,Ny,J): 
         nbs = self.nb_sum(lattice, i, j,Nx,Ny)
         return 2*J*lattice[i][j]*nbs
     
     #metropolis with periodic BC
-    def metropolis(self, lattice, kT,Nx,Ny):
+    def metropolis(self, lattice, kT,Nx,Ny,J):
         for i in range(Nx):
             for j in range(Ny):
-                delta_E = self.dEnergy(lattice,i ,j,Nx,Ny)
+                delta_E = self.dEnergy(lattice,i ,j,Nx,Ny,J)
                 site = lattice[i][j]
                 if delta_E<0:
                     site *= -1 #energy is lowered, accept
@@ -46,7 +46,7 @@ class Ising():
         return lattice
     
     #energy per site
-    def energy(self, lattice,Nx,Ny):
+    def energy(self, lattice,Nx,Ny,J):
         erg = 0
         for i in range(Nx):
             for j in range(Ny):
@@ -56,7 +56,7 @@ class Ising():
         return norm_energy
     
     #energy squared per site                       
-    def energy2(self, lattice,Nx,Ny):
+    def energy2(self, lattice,Nx,Ny,J):
         erg2 = 0
         for i in range(Nx):
             for j in range(Ny):
@@ -67,6 +67,7 @@ class Ising():
         norm_energy2 = erg2/(4*Nx*Ny) 
         return norm_energy2
     
+    #magnetization per spin
     def mag_per_spin(self,lattice,Nx,Ny):
         Mag = 0
         for i in range(Nx):
@@ -74,12 +75,15 @@ class Ising():
                 Mag += lattice[i][j]
         return Mag/(Nx*Ny)
                        
+    #magnetization squared per spin
     def mag2_per_spin(self,lattice,Nx,Ny):
         Mag2 = 0
         for i in range(Nx):
             for j in range(Ny):
-                Mag2 += lattice
+                Mag2 += lattice[i][j]**2
+        return Mag2/(Nx*Ny)
     
+    #look at ground state spin energy with squared (1D line) lattice
     def square_energy_ground_state(self, Nx,Ny,J):
         #REFERENCE: http://physics.stackexchange.com/questions/133005/how-to-calculate-the-ground-state-energy-for-the-ising-model
         
