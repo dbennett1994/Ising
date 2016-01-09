@@ -1,0 +1,135 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sat Jan 09 10:41:23 2016
+
+@author: Dan
+"""
+import numpy as np
+import math
+
+class Ising(object):
+    def __init__(self, size, shape, dimension, J):
+        self.dimension = dimension
+        self.x = size
+        self.y = size
+        self.z = size
+        
+        if self.dimension == 1:
+            self.z = 1
+            self.y = 1
+            
+        if self.dimension == 2:
+            self.z = 1
+            if shape == 'triangular':
+                self.shape = True
+            if shape == 'square':
+                self.shape = False
+        else:
+            self.shape = False
+            
+        self.J = J
+    #RANDOM MATRIX
+    def matrix(self): #NXN RANDOM MATRIX, ENTRIES +-1
+        matrix = np.zeros((self.z, self.y, self.x))
+        for i in range(self.z):
+            for j in range(self.y):
+                for k in range(self.x):
+                    if (np.random.randint(0,2)==0):
+                        matrix[i][j][k] = 1
+                    else:
+                        matrix[i][j][k] = -1
+        return matrix
+
+    def H(self,matrix,i,j,k,flip):
+        if flip:
+            spin = -1*matrix[i][j][k]
+        else:
+            spin = matrix[i][j][k]
+        nn = 0 #nearest neighbours
+        nn += matrix[i][j][(k-1)%self.x] #left
+        nn += matrix[i][j][(k+1)%self.x] #right
+        if self.dimension > 1:
+            nn += matrix[i][(j-1)%self.x][k] #bottom
+            nn += matrix[i][(j+1)%self.x][k] #top
+        if self.shape:
+            nn += matrix[i][(j-1)%self.x][(k-1)%self.x] #bottom-left
+            nn += matrix[i][(j+1)%self.x][(k+1)%self.x] #top-left
+        if self.dimension == 3:
+            nn += matrix[(i+1)%self.x][j][i] #above
+            nn += matrix[(i-1)%self.x][j][i] #below
+        H = -self.J*spin*nn
+        return H
+        
+    def deltaE(self, matrix, i, j, k): #ENERGY CHANGE OF FLIP
+        dE = self.H(matrix, i, j, k, True) - self.H(matrix, i, j, k, False)
+        return dE
+
+    def spin_flip(self, matrix, i, j, k, T): #FLIPS SPIN
+        dE = self.deltaE(matrix, i, j, k)     #kb = 1, T = Temp
+        if dE < 0 or math.log(np.random.random()) < -dE/float(T):
+            matrix[i][j][k] = -1*matrix[i][j][k]
+            return matrix
+        else:
+            return matrix
+            
+    def sweep(self, matrix, T, num):
+        for k in range(num): #number required to reach equilibrium
+            a = np.random.permutation(self.z) # permutes entries to randomly select
+            b = np.random.permutation(self.y) # lattice sites
+            c = np.random.permutation(self.x)
+            for i in range(self.z):
+                for j in range(self.y):
+                    for k in range(self.x):
+                        self.spin_flip(matrix, a[i], b[j], c[k], T)
+        return matrix
+
+    #AVERAGE ENERGY PER SPIN
+    def energy(self, matrix):
+        energy = 0
+        for i in range(self.z):
+            for j in range(self.y):
+                for k in range(self.x):
+                    energy += self.H(matrix, i, j, k, False)
+        return energy/(2*(self.x*self.y*self.z)) #half to account for counting each pair twice
+        
+        
+    #AVERAGE SQUARE ENERGY PER SPIN
+    def energy2(self, matrix):
+        energy = 0
+        for i in range(self.z):
+            for j in range(self.y):
+                for k in range(self.x):
+                    energy += (self.H(matrix, i, j, k, False))**2
+        return energy/((4*(self.x*self.y*self.z))) #quarter since the half from before is also squared
+    
+    #AVERAGE MAGNETIZATION PER SPIN
+    def magnetisation(self, matrix):
+        mag = 0
+        for i in range(self.z):
+            for j in range(self.y):
+                for k in range(self.x):
+                    mag += matrix[i][j][k]
+        return mag/float(self.x*self.y*self.z)
+
+    #AVERAGE SQUARE MAGNETIZATION PER SPIN
+    def magnetisation2(self,matrix):
+        mag2 = 0
+        for i in range(self.z):
+            for j in range(self.y):
+                for k in range(self.x):
+                    mag2 += matrix[k][j][i]**2
+        return mag2/float(self.x*self.y*self.z)
+    
+    #SPECIFIC HEAT
+    def Cv(self, matrix, T):
+        e = self.energy(matrix)
+        e2 = self.energy2(matrix)
+        Cv = (e2-e**2)/float(T**2)
+        return Cv
+    
+    #MAGNETIC SUSCEPTIBILITY
+    def chi(self, matrix, T):
+        m = self.magnetisation(matrix)
+        m2 = self.magnetisation2(matrix)
+        chi = (m2-m**2)/float(T)
+        return chi
