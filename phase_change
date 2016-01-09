@@ -1,0 +1,30 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import time
+import metropolis as met
+now = time.strftime("%H_%M_%S")
+
+one = met.Ising(10, 'square', 1, 10) #one dimensional array, J = 1
+three = met.Ising(10, 'square', 3, 1) #three dimensional array, J = 1
+
+Tmax = 5
+Tmin = 0.1
+dT = 0.1
+n = int((Tmax-Tmin)/float(dT))
+
+tee = np.zeros(n) #arrays for the observables
+mag = np.zeros(n)
+
+av = 10 #number of times to average over
+for k in range(av):
+    mat1 = np.ones((one.z,one.y,one.x))
+    for t in range(n): #temperature range
+        T = Tmin + t*dT
+        mat = one.sweep(mat1,T,20)
+        tee[t] = T
+        mag[t] += one.magnetisation(mat1)
+        
+mag = mag/av
+        
+plt.scatter(tee,mag)
+plt.show()
